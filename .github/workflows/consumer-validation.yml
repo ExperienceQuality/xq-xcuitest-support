@@ -1,0 +1,31 @@
+name: Consumer validation contract
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: '0 3 * * 0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: consumer-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+# This workflow is intentionally a contract until consumer repositories expose
+# their exact schemes and pinned simulator destinations. It must never report
+# a CoreSimulatorService failure as a passing test.
+jobs:
+  contract:
+    name: consumer integration contract
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          echo 'Finance: build-for-testing then serial test-without-building on pinned iOS 17 simulator.'
+          echo 'Fitness: xcodegen generate, assert clean generated diff, then the same build/test sequence.'
+          echo 'Required result bundles live under $RUNNER_TEMP and are uploaded by consumer jobs.'
+          echo 'Consumer repositories and schemes are intentionally not modified by this package.'

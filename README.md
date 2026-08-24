@@ -29,6 +29,20 @@ final class FinanceUITestCase: BaseUITestCase {
 
 App-owned screen objects and journeys use `application` and `ScreenObject`; an app may override `verifyInitialState(in:)` when needed.
 
+The consumer base class is intentionally minimal. `BaseUITestCase` launches in
+`setUp`, applies `resetBeforeEachTest` (true by default), captures screenshot
+and accessibility-hierarchy attachments for failures, and terminates in
+`tearDown`:
+
+```swift
+@MainActor
+final class PortfolioTests: FinanceUITestCase {
+    func testEmptyPortfolio() {
+        application!.staticTexts["portfolio.empty"].requireExistence()
+    }
+}
+```
+
 ## API
 
 The package provides `LaunchConfiguration`, `ApplicationDescriptor`,
@@ -43,6 +57,19 @@ swift test
 
 The manifest uses Swift tools 5.10, declares iOS 17 and macOS 14 for host-side unit tests, and has no dependencies, plugins, binaries, or resources.
 
-## Known uncertainty
+## Consumer validation
+
+Each consumer pins a package revision in `Package.resolved` and links the
+product only to its UI-test target. The repository's consumer-validation
+workflow documents the required serial `build-for-testing` and
+`test-without-building` contract on a pinned iOS 17 simulator. It remains
+manual until consumer repositories provide their exact schemes and simulator
+destinations.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+## Known limitation
 
 `XCUIApplication`, `XCUIElement`, screenshots, and accessibility hierarchy are XCTest UI-testing APIs. Their availability and link behavior from a Swift package target can differ between command-line SwiftPM and an Xcode iOS UI-test bundle. Consumer POCs must link this product to each UI-test target and run on an iOS 17+ simulator; `swift test` validates only configuration values and host compilation.
