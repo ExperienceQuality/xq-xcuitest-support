@@ -1,0 +1,77 @@
+name: Package CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SWIFT_VERSION: '5.10'
+
+jobs:
+  swift-test:
+    name: swift test
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      - run: swift test --parallel
+
+  swift-build-ios:
+    name: iOS package build
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      - run: xcodebuild -scheme XQXCUITestSupport -destination 'generic/platform=iOS Simulator' -sdk iphonesimulator IPHONEOS_DEPLOYMENT_TARGET=17.0 build
+
+  package-structure:
+    name: package structure
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          swift package dump-package > "$RUNNER_TEMP/package.json"
+          swift package show-dependencies
+          test "$(find Sources -type f -name '*.swift' | wc -l | tr -d ' ')" -gt 0
+          if find . -type f \( -name '*.zip' -o -name '*.xcframework' -o -name '*.framework' -o -name '*.binaryTarget' \) -print -quit | grep -q .; then
+            echo 'Unexpected binary/archive artifact found' >&2
+            exit 1
+          fi
+          if jq -e '(.dependencies | length) != 0 or ([.targets[] | select((.plugins // []) | length > 0)] | length != 0) or ([.targets[] | select((.resources // []) | length > 0)] | length != 0)' "$RUNNER_TEMP/package.json"; then
+            echo 'Unexpected dependency, plugin, or resource found' >&2
+            exit 1
+          fi
+          git diff --check
+
+  security-and-license:
+    name: security and license checks
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          test -f LICENSE
+          grep -q '^MIT License$' LICENSE
+          test -f SECURITY.md
+          test -f .github/CODEOWNERS
+          if git grep -n -E '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY-----|ghp_[A-Za-z0-9]{30,})' -- . ':!*.md'; then
+            echo 'Possible credential found' >&2
+            exit 1
+          fi

@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (for example 0.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: verify package
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ inputs.version }}"
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git diff --quiet
+          swift package dump-package > "$RUNNER_TEMP/manifest.json"
+          swift test --parallel 2>&1 | tee "$RUNNER_TEMP/test-summary.txt"
+          xcodebuild -scheme XQXCUITestSupport -destination 'generic/platform=iOS Simulator' -sdk iphonesimulator IPHONEOS_DEPLOYMENT_TARGET=17.0 build
+          printf 'Package version: %s\nCommit: %s\n' "$version" "$GITHUB_SHA" > "$RUNNER_TEMP/build-summary.txt"
+      - name: Create source archive and checksum
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then version="${GITHUB_REF_NAME#v}"; else version="${{ inputs.version }}"; fi
+          git archive --format=tar.gz --prefix="xq-xcuitest-support-${version}/" "${GITHUB_SHA}" > "$RUNNER_TEMP/xq-xcuitest-support-${version}.tar.gz"
+          shasum -a 256 "$RUNNER_TEMP/xq-xcuitest-support-${version}.tar.gz" > "$RUNNER_TEMP/SHA256SUMS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.ref_name }}
+          path: |
+            ${{ runner.temp }}/xq-xcuitest-support-*.tar.gz
+            ${{ runner.temp }}/SHA256SUMS
+            ${{ runner.temp }}/manifest.json
+            ${{ runner.temp }}/*-summary.txt
+          retention-days: 90
+
+  publish:
+    name: publish immutable GitHub release
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; semantic versions are immutable" >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+      - name: Attest source archive
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*.tar.gz'
