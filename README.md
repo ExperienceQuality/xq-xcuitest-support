@@ -7,6 +7,73 @@ The package is linked only to consumer UI-test targets. Consumer applications
 retain their own bundle identifiers, reset policy, accessibility identifiers,
 screen objects, journeys, and device scripts.
 
+## Installation
+
+The consumer is an Xcode project, not another Swift package. This repository's
+`Package.swift` is only for building and testing the package; neither consumer
+app needs its own `Package.swift`.
+
+### Xcode UI
+
+For a remote package, choose **File > Add Package Dependencies…** in Xcode,
+enter this repository URL, and select the required version rule. During local
+POC work, choose **File > Add Package Dependencies… > Add Local…** and select
+the package checkout instead.
+
+In the package product selection dialog, select `XQXCUITestSupport` for the
+existing `FinanceUITests` or `FitnessUITests` target. Confirm under the target's
+**General > Frameworks, Libraries, and Embedded Content** (or **Build Phases >
+Link Binary With Libraries**) that the product is linked to the UI-test bundle,
+not the application target.
+
+### XcodeGen
+
+Declare the package in the consumer's `project.yml`. The path is relative to
+the directory containing `project.yml`:
+
+```yaml
+packages:
+  XQXCUITestSupport:
+    path: ../xq-xcuitest-support
+
+targets:
+  FinanceUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - FinanceUITests
+    dependencies:
+      - package: XQXCUITestSupport
+        product: XQXCUITestSupport
+
+  FitnessUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - FitnessUITests
+    dependencies:
+      - package: XQXCUITestSupport
+        product: XQXCUITestSupport
+```
+
+For a release dependency, replace `path` with the repository URL and a
+version requirement. Regenerate and resolve the project with:
+
+```sh
+xcodegen generate
+xcodebuild -resolvePackageDependencies -project YourApp.xcodeproj
+```
+
+Commit the generated package resolution file according to the consumer
+repository's policy. Xcode normally stores it at
+`YourApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`
+(or under the corresponding `.xcworkspace` directory). `Package.resolved`
+pins remote package revisions for reproducible CI builds. A local `path`
+dependency is not a registry/version pin; use a tagged remote package before
+considering the dependency release-ready.
+
 Add this package to an app project and link the `XQXCUITestSupport` product only to its UI-test target. The consumer provides one descriptor; the base class owns launch, reset, teardown, and failure diagnostics:
 
 ```swift
