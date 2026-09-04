@@ -110,6 +110,35 @@ final class PortfolioTests: FinanceUITestCase {
 }
 ```
 
+## Interaction API
+
+Directions describe finger motion (for example, `.up` moves the finger upward
+and normally reveals content below). Screen and container swipes accept a
+finite fraction in `(0, 0.8]`; the default `0.6` keeps each endpoint at least
+10% from the referenced element's edges.
+
+```swift
+try application.swipe(.left, screenPercentage: 0.6)
+
+let list = application.collectionViews["results"]
+let result = application.cells["result.42"]
+let attempts = try list.scrollUntilHittable(result, direction: .up, maxAttempts: 8)
+try result.scrollToVisible(in: list, direction: .up)
+
+try application.otherElements["card.source"].drag(
+    to: application.otherElements["column.destination"]
+)
+```
+
+`scrollUntilHittable` always acts on the explicitly selected container, checks
+the target before the first gesture, and returns the number of gestures used.
+It never guesses an ancestor or loops without a bound. `scrollToVisible(in:)`
+is the target-returning convenience over that same operation. All interaction
+APIs share one timeout budget, reject invalid input with
+`UIInteractionError`, and avoid arbitrary sleeps and automatic drag retries.
+Keep orientation and layout stable while XCTest injects a gesture. App-specific
+overlays can still obscure otherwise valid normalized coordinates.
+
 ## API
 
 The package provides `LaunchConfiguration`, `ApplicationDescriptor`,
@@ -132,6 +161,27 @@ workflow documents the required serial `build-for-testing` and
 `test-without-building` contract on a pinned iOS 17 simulator. It remains
 manual until consumer repositories provide their exact schemes and simulator
 destinations.
+
+The repository includes `Fixtures/InteractionFixture`, a minimal XcodeGen app
+and UI-test target for gesture acceptance. With XcodeGen, full Xcode, and a
+pinned iOS 17 simulator installed:
+
+```sh
+cd Fixtures/InteractionFixture
+xcodegen generate
+xcodebuild build-for-testing -project InteractionFixture.xcodeproj \
+  -scheme InteractionFixture \
+  -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5'
+xcodebuild test-without-building -project InteractionFixture.xcodeproj \
+  -scheme InteractionFixture \
+  -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5'
+```
+
+Run the UI-test suite serially and repeat it ten times before release. The
+fixture covers four swipe directions and percentage boundaries, vertical and
+horizontal explicit-container scrolling, already-visible and exhausted target
+states, and element-to-element drag/drop. Host-side `swift test` proves only
+the deterministic validation and geometry policy, not gesture injection.
 
 ## License
 
