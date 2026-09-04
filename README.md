@@ -1,7 +1,7 @@
 # XQ XCUITest Support
 
-Shared XCUITest support for XQ iOS applications. Initial release target:
-`0.0.1`.
+Shared XCUITest support for XQ iOS applications. Current release:
+`0.1.0`.
 
 The package is linked only to consumer UI-test targets. Consumer applications
 retain their own bundle identifiers, reset policy, accessibility identifiers,
