@@ -8,10 +8,15 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .library(name: "XQXCUITestSupport", targets: ["XQXCUITestSupport"])
+        .library(name: "XQXCUITestSupport", targets: ["XQXCUITestSupport"]),
+        .library(name: "XQNetworkStubbing", targets: ["XQNetworkStubbing"])
     ],
     targets: [
+        .target(name: "XQNetworkStubbing"),
         .target(name: "XQXCUITestSupport"),
-        .testTarget(name: "XQXCUITestSupportTests", dependencies: ["XQXCUITestSupport"])
+        .testTarget(
+            name: "XQXCUITestSupportTests",
+            dependencies: ["XQXCUITestSupport", "XQNetworkStubbing"]
+        )
     ]
 )
