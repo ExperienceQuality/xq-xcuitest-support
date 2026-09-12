@@ -1,9 +1,11 @@
 # XQ XCUITest Support
 
-Shared XCUITest support for XQ iOS applications. Initial release target:
-`0.0.1`.
+Shared XCUITest support for XQ iOS applications. Current release:
+`0.1.0`.
 
-The package is linked only to consumer UI-test targets. Consumer applications
+The package is linked to consumer UI-test targets. `XQNetworkStubbing` is a
+separate Foundation-only product for consumer applications that opt into
+test-only network interception. Consumer applications
 retain their own bundle identifiers, reset policy, accessibility identifiers,
 screen objects, journeys, and device scripts.
 
@@ -144,6 +146,13 @@ overlays can still obscure otherwise valid normalized coordinates.
 The package provides `LaunchConfiguration`, `ApplicationDescriptor`,
 `BaseUITestCase`, `ScreenObject`, and `XCUIElement` helpers for existence,
 hittability, tapping, and text replacement.
+
+`XQNetworkStubbing` currently provides the process-local foundation for
+test-only response stubbing: `StubRoute`, `StubResponse`, `StubRegistry`, and
+`StubURLProtocol`. A consumer App must install `XQNetworkStubbing` inside its
+own process; registering a `URLProtocol` from the XCUITest runner cannot
+intercept App traffic. Runtime control transport and consumer integration are
+planned follow-up work.
 
 ## Validation
 
