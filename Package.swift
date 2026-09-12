@@ -13,7 +13,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "XQNetworkStubbing"),
-        .target(name: "XQXCUITestSupport"),
+        .target(name: "XQXCUITestSupport", dependencies: ["XQNetworkStubbing"]),
         .testTarget(
             name: "XQXCUITestSupportTests",
             dependencies: ["XQXCUITestSupport", "XQNetworkStubbing"]
