@@ -151,8 +151,9 @@ hittability, tapping, and text replacement.
 test-only response stubbing: `StubRoute`, `StubResponse`, `StubRegistry`, and
 `StubURLProtocol`. A consumer App must install `XQNetworkStubbing` inside its
 own process; registering a `URLProtocol` from the XCUITest runner cannot
-intercept App traffic. Runtime control transport and consumer integration are
-planned follow-up work.
+intercept App traffic. `XQXCUITestSupport` also provides `StubControlClient`
+for the planned App-local control server. Runtime server transport and
+consumer integration remain follow-up work.
 
 ## Validation
 
