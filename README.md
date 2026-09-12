@@ -1,7 +1,7 @@
 # XQ XCUITest Support
 
 Shared XCUITest support for XQ iOS applications. Current release:
-`0.1.0`.
+`0.2.0`.
 
 The package is linked to consumer UI-test targets. `XQNetworkStubbing` is a
 separate Foundation-only product for consumer applications that opt into
