@@ -1,6 +1,6 @@
 import Foundation
 
-public struct StubResponse: Sendable, Equatable {
+public struct StubResponse: Codable, Sendable, Equatable {
     public let statusCode: Int
     public let headers: [String: String]
     public let body: Data?
@@ -29,16 +29,20 @@ public struct StubResponse: Sendable, Equatable {
     }
 }
 
-public struct StubRoute: Sendable, Equatable {
+public struct StubRoute: Codable, Sendable, Equatable {
+    public let id: String
     public let method: String
     public let url: URL
     public let response: StubResponse
 
     public init(
+        id: String = UUID().uuidString,
         method: String = "GET",
         url: URL,
         response: StubResponse
     ) {
+        precondition(!id.isEmpty && !id.contains("/"), "id must be non-empty and contain no slash")
+        self.id = id
         self.method = method.uppercased()
         self.url = url
         self.response = response
@@ -69,7 +73,7 @@ public final class StubRegistry: @unchecked Sendable {
 
     public func add(_ route: StubRoute) {
         lock.withLock {
-            routes.removeAll { $0.method == route.method && $0.url == route.url }
+            routes.removeAll { $0.id == route.id || ($0.method == route.method && $0.url == route.url) }
             routes.append(route)
         }
     }

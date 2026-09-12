@@ -6,6 +6,7 @@ final class NetworkStubbingTests: XCTestCase {
     func testRegistryMatchesExactMethodAndURL() throws {
         let registry = StubRegistry()
         let route = StubRoute(
+            id: "items",
             method: "get",
             url: URL(string: "https://example.com/items?scope=all")!,
             response: StubResponse(statusCode: 201, body: Data("ok".utf8))
@@ -28,5 +29,22 @@ final class NetworkStubbingTests: XCTestCase {
         registry.reset()
 
         XCTAssertNil(registry.response(for: request))
+    }
+
+    func testRouteAndResponseAreCodable() throws {
+        let route = StubRoute(
+            id: "portfolio",
+            method: "GET",
+            url: URL(string: "https://example.com/portfolio")!,
+            response: StubResponse(
+                statusCode: 503,
+                headers: ["Retry-After": "1"],
+                body: Data("busy".utf8)
+            )
+        )
+
+        let data = try JSONEncoder().encode(route)
+
+        XCTAssertEqual(try JSONDecoder().decode(StubRoute.self, from: data), route)
     }
 }
